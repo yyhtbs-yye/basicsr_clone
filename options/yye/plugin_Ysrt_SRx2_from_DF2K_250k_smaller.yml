@@ -1,0 +1,150 @@
+# general settings
+name: plugin_Ysrt_SRx2_from_DF2K_250k_smaller
+model_type: YsrtModel
+scale: 2
+num_gpu: auto
+manual_seed: 1234
+
+plugin:
+  # The class name of your plugin network (registered in MODEL_REGISTRY)
+  net_class: "SwinIR"
+
+  # Parameters for initializing the plugin network
+  net_para:
+    upscale: 2
+    in_chans: 3
+    img_size: 64
+    window_size: 16
+    interval_size: 4
+    img_range: 1.
+    depths: [2, 2, 2]
+    embed_dim: 180
+    num_heads: [6, 6, 6]
+    mlp_ratio: 2
+    use_checkpoint: false
+    upsampler: 'pixelshuffle'
+    resi_connection: '1conv'
+
+  # Mapping from module paths in the target network (e.g., net_g) to the corresponding
+  # submodule paths in the plugin network that will replace them.
+  replace_mapping:
+    "pre_fextor": "feature_extractor"
+
+  # Dictionary mapping module paths to file paths where pretrained weights are stored.
+  net_load_paths:
+    "pre_fextor": "experiments/pretrained_models/sisr/SwinIR_SRx2_from_DF2K_250k_smaller_net_g_298000.pth"
+
+  # List of module paths (typically within the plugin) that should be unfrozen.
+  adaptor_paths: []
+
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: REDS
+    type: REDSRecurrentDataset
+    dataroot_gt: datasets/REDS/train_sharp
+    dataroot_lq: datasets/REDS/train_sharp_bicubic/X2
+    meta_info_file: datasets/REDS/meta_info/meta_info_REDS_GT.txt
+    val_partition: REDS4  # set to 'official' when use the official validation partition
+    test_mode: False
+    io_backend:
+      type: disk
+
+    num_frame: 15
+    gt_size: 256
+    interval_list: [1]
+    random_reverse: false
+    use_hflip: true
+    use_rot: true
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 6
+    batch_size_per_gpu: 1
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+  val:
+    name: REDS4
+    type: VideoRecurrentTestDataset
+    dataroot_gt: datasets/REDS/val_sharp
+    dataroot_lq: datasets/REDS/val_sharp_bicubic/X2
+
+    gt_size: 256
+
+    cache_data: true
+    io_backend:
+      type: disk
+
+    num_frame: -1  # not needed
+
+# network structures
+network_g:
+  type: YsrtNet
+  in_chans: 3
+  embed_dim: 180
+  scale: 2
+  spynet_pretrained: experiments/pretrained_models/flownet/spynet_sintel_final-3d2a1287.pth
+
+# path
+path:
+  pretrain_network_g: ~
+  param_key_g: 'params_ema'
+  strict_load_g: true
+  resume_state: ~ # experiments/adapt_SwinIR_SRx2_from_DF2K_250k_smaller/training_states/500.state
+
+# training settings
+train:
+  ema_decay: 0.999
+  optim_g:
+    type: Adam
+    lr: !!float 2e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [125000, 200000, 225000, 240000]
+    gamma: 0.5
+
+  total_iter: 300000
+  warmup_iter: -1  # no warm up
+
+  # losses
+  pixel_opt:
+    type: L1Loss
+    loss_weight: 1.0
+    reduction: mean
+
+# validation settings
+val:
+  val_freq: !!float 5e3
+  save_img: true
+  pbar: False
+
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 2
+      test_y_channel: true
+      better: higher  # the higher, the better. Default: higher
+    ssim:
+      type: calculate_ssim
+      crop_border: 2
+      test_y_channel: true
+      better: higher  # the higher, the better. Default: higher
+
+# logging settings
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 5e2
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500

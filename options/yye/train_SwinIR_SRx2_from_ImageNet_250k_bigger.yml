@@ -1,0 +1,125 @@
+# general settings
+name: train_SwinIR_SRx2_from_ImageNet_250k_bigger
+model_type: SwinIRModel
+scale: 2
+num_gpu: auto
+manual_seed: 1234
+
+# auto_resume: true
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: ImageNet
+    type: PairedImageDataset
+    dataroot_gt: ./datasets/ImageNet/X1
+    dataroot_lq: ./datasets/ImageNet/bicubic/X2
+    io_backend:
+      type: disk
+
+    gt_size: 256
+    use_hflip: true
+    use_rot: true
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 16
+    batch_size_per_gpu: 2
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+  val_1:
+    name: Set5
+    type: PairedImageDataset
+    dataroot_gt: ./datasets/Set5/GTmod12
+    dataroot_lq: ./datasets/Set5/LRbicx2
+    io_backend:
+      type: disk
+    batch_size_per_gpu: 16
+
+  val_2:
+    name: Set14
+    type: PairedImageDataset
+    dataroot_gt: ./datasets/Set14/GTmod12
+    dataroot_lq: ./datasets/Set14/LRbicx2
+    io_backend:
+      type: disk
+
+# network structures
+network_g:
+  type: SwinIR
+  upscale: 2
+  in_chans: 3
+  img_size: 64
+  window_size: 16
+  interval_size: 4
+  img_range: 1.
+  depths: [6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
+  embed_dim: 240
+  num_heads: [6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
+  mlp_ratio: 2
+  use_checkpoint: true
+  upsampler: 'pixelshuffle'
+  resi_connection: '1conv'
+
+# path
+path:
+  pretrain_network_g: ~
+  param_key_g: 'params_ema'
+  strict_load_g: true
+  resume_state: ~
+
+# training settings
+train:
+  ema_decay: 0.999
+  optim_g:
+    type: Adam
+    lr: !!float 2e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [125000, 200000, 225000, 240000]
+    gamma: 0.5
+
+  total_iter: 300000
+  warmup_iter: -1  # no warm up
+
+  # losses
+  pixel_opt:
+    type: L1Loss
+    loss_weight: 1.0
+    reduction: mean
+
+# validation settings
+val:
+  val_freq: !!float 1e2
+  save_img: true
+  pbar: False
+
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 2
+      test_y_channel: true
+      better: higher  # the higher, the better. Default: higher
+    ssim:
+      type: calculate_ssim
+      crop_border: 2
+      test_y_channel: true
+      better: higher  # the higher, the better. Default: higher
+
+# logging settings
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 5e2
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500
