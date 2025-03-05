@@ -1,3 +1,7 @@
+# GENERATE TIME: Wed Mar  5 12:33:21 2025
+# CMD:
+# basicsr/adapt.py -opt /home/admyyh/python_workspaces/basicsr_clone/options/yye/adapt_SwinIR_SRx2_from_DF2K_250k_smaller.yml --launcher none --local_rank=0
+
 # general settings
 name: adapt_SwinIR_SRx2_from_DF2K_250k_smaller
 model_type: SwinIRModel
@@ -7,9 +11,9 @@ manual_seed: 1234
 
 adaptation:
   layer_names:
-  - feature_extractor.layers.0.residual_group.blocks.0.attn.qkv
-  - feature_extractor.layers.1.residual_group.blocks.0.attn.qkv
-  - feature_extractor.layers.2.residual_group.blocks.0.attn.qkv
+  - layers.0.residual_group.blocks.0.attn.qkv
+  - layers.1.residual_group.blocks.0.attn.qkv
+  - layers.2.residual_group.blocks.0.attn.qkv
   adaptor_path: basicsr.adaptors.lora_linear
   adaptor_class: Adaptor
   config:

@@ -6,8 +6,8 @@ from basicsr.adapt import adapt_pipeline
 
 def main():
     sys.argv = [
-        'basicsr/train.py',  # Simulate script name
-        '-opt', '/home/admyyh/python_workspaces/basicsr_sopy/options/yye/adapt_SwinIR_SRx2_from_DF2K_250k_smaller.yml',
+        'basicsr/adapt.py',  # Simulate script name
+        '-opt', '/home/admyyh/python_workspaces/basicsr_clone/options/yye/adapt_SwinIR_SRx2_from_DF2K_250k_smaller.yml',
         '--launcher', 'none',                # Launcher type
         # '--auto_resume',                     # Include this flag if you want auto-resume
         # '--debug',                           # Include this flag to enable debug mode
